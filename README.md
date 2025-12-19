@@ -106,8 +106,7 @@ This system follows a **microservices architecture** with clear separation of co
                              │
                              ▼
                     ┌─────────────────┐
-                    │   Nginx (80)    │  Reverse Proxy
-                    │  Request Router │
+                    │   Nginx (80)    │    
                     └────────┬────────┘
                              │
                 ┌────────────┴────────────┐
@@ -119,25 +118,24 @@ This system follows a **microservices architecture** with clear separation of co
     │  FastAPI             │   │  Litestar            │
     └──────────┬───────────┘   └──────────┬───────────┘
                │                          │
-    ┌──────────┴──────────┐               │
-    │                     │               │
-    ▼                     ▼               ▼
-┌─────────┐         ┌─────────┐    ┌──────────┐
-│PostgreSQL│         │  Redis  │    │ClickHouse│
-│  (5432)  │         │  (6379) │    │  (8123)  │
-└─────────┘         └────┬────┘    └────┬──────┘
-                        │               │
-                        ▼               │
-                  ┌──────────┐         │
-                  │ RabbitMQ │         │
-                  │  (5672)   │         │
-                  └─────┬────┘         │
-                        │               │
-                        ▼               │
-                  ┌──────────────┐     │
-                  │Event Consumer│     │
-                  │  (Background)│─────┘
-                  └──────────────┘
+    ┌──────────┴────────────┐             │
+    │          │            │             │
+    ▼          ▼            ▼             |
+┌──────────┐ ┌──────┐   ┌─────────┐       |
+│PostgreSQL│ │Redis │   │ RabbitMQ│       |
+│  (5432)  │ │(6379)│   │  (5672) │       |
+└──────────┘ └──────┘   └────┬────┘       |
+                             │            │
+                             ▼            │
+                      ┌──────────────┐    │
+                      │Event Consumer│    │
+                      │  (Background)│    |
+                      └──────────────┘    |
+                              |           ▼
+                              |     ┌──────────┐
+                              └───▶ │ClickHouse│
+                                    │  (8123)  │
+                                    └──────────┘
 ```
 
 ### Request Flow Diagram
@@ -293,7 +291,7 @@ Query ClickHouse
 │ (Litestar)           │
 └───┬──────────────────┘
     │
-    └─→ ClickHouse: Query aggregated statistics
+    └─▶ ClickHouse: Query aggregated statistics
         ├─ SELECT COUNT(*) as total_clicks
         ├─ SELECT COUNT(DISTINCT ip_address) as unique_visitors
         ├─ SELECT * FROM clicks_by_day WHERE short_code = 'abc123'
