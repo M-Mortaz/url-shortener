@@ -14,6 +14,7 @@ A scalable, production-ready URL shortening service built with **FastAPI**, **SQ
 - [Services Description](#-services-description)
 - [Getting Started](#-getting-started)
 - [Running Tests](#-running-tests)
+- [Code Quality & Linting](#-code-quality--linting)
 - [Load Testing](#-load-testing)
 - [Deployment](#-deployment)
 - [Configuration](#-configuration)
@@ -39,7 +40,9 @@ A scalable, production-ready URL shortening service built with **FastAPI**, **SQ
 - **Database Migrations**: Alembic for schema versioning
 - **Load Testing**: Locust-based performance testing suite
 - **Comprehensive Testing**: Async unit and integration tests
-- **API Documentation**: OpenAPI/Swagger specification
+- **Code Quality**: flake8 linter for code style and quality checks
+- **Fast Package Management**: uv for 10-100x faster dependency installation
+- **API Documentation**: OpenAPI/Swagger specification with interactive UI
 - **Health Checks**: Service health monitoring
 - **Logging**: Request logging middleware
 
@@ -80,6 +83,12 @@ This system follows a **microservices architecture** with clear separation of co
 - **Docker & Docker Compose** - Containerization and orchestration
 - **Nginx** - Reverse proxy and load balancer
 - **Python 3.14** - Runtime environment
+
+### Development Tools
+- **uv** - Fast Python package manager and resolver (10-100x faster than pip)
+  - Project uses `pyproject.toml` for dependency management
+  - Handles virtual environments, dependency resolution, and package installation
+- **flake8** - Python code linter for style and quality checks
 
 ### Testing & Monitoring
 - **Pytest** - Testing framework
@@ -515,6 +524,45 @@ docker compose logs -f
 # Analytics: http://localhost/stats/{short_code}
 ```
 
+### Local Development Setup
+
+For local development without Docker:
+
+```bash
+# Install uv (fast Python package manager)
+pip install uv
+# Or using the official installer
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install project dependencies using pyproject.toml
+# This installs the project in editable mode with all dependencies
+uv pip install -e .
+
+# Install with development dependencies (includes pytest, flake8, etc.)
+uv pip install -e ".[dev]"
+
+# Or use uv's sync command (creates virtual environment automatically)
+uv sync --dev
+
+# Run tests
+pytest tests/ -v
+# Or with uv
+uv run pytest tests/ -v
+
+# Run linter
+flake8 app/ tests/ event-consumer/ analytics-service/ --statistics
+# Or with uv
+uv run flake8 app/ tests/ event-consumer/ analytics-service/ --statistics
+
+# Add new dependencies
+uv add <package-name>           # Add runtime dependency
+uv add --dev <package-name>     # Add development dependency
+
+# Update dependencies
+uv lock --upgrade              # Update lock file
+uv sync                        # Sync environment
+```
+
 ### Service URLs
 
 | Service | URL | Description |
@@ -575,6 +623,52 @@ See [tests/README.md](tests/README.md) for detailed testing documentation.
 
 ---
 
+## 🔍 Code Quality & Linting
+
+### Using flake8
+
+The project uses **flake8** for code quality and style checking. Configuration is defined in both `.flake8` and `pyproject.toml` (under `[tool.flake8]`).
+
+#### Running Linting with Docker Compose
+
+```bash
+# Run flake8 linter
+docker compose --profile lint up lint
+
+# Check exit code (0 = success, non-zero = issues found)
+echo $?
+```
+
+#### Running Locally
+
+```bash
+# Install flake8 using uv (recommended)
+pip install uv
+uv pip install -e ".[dev]"  # Installs flake8 from pyproject.toml
+
+# Or install flake8 directly
+uv pip install flake8
+
+# Run flake8 on all Python code
+flake8 app/ tests/ event-consumer/ analytics-service/ --statistics
+
+# Or using uv run
+uv run flake8 app/ tests/ event-consumer/ analytics-service/ --statistics
+
+# Run on specific directory
+flake8 app/ --statistics
+```
+
+#### Configuration
+
+The `.flake8` configuration file includes:
+- Maximum line length: 100 characters
+- Excluded directories: `__pycache__`, `venv`, `migrations/versions`, etc.
+- Per-file ignores for `__init__.py` and test files
+- Complexity checking (max complexity: 10)
+
+---
+
 ## 📊 Load Testing
 
 ### Using Locust
@@ -591,6 +685,10 @@ open http://localhost:8089
 # - RedirectUser: Test redirects
 # - StatsUser: Test analytics
 ```
+
+![Locust Load Testing UI](assets/benchmark.png)
+
+*Locust Web UI showing load testing interface with user class selection and real-time statistics*
 
 ### Providing Custom Short Codes
 
@@ -791,11 +889,17 @@ url-shortener/
 ├── clickhouse-config/            # ClickHouse Configuration
 │   └── users.xml                 # User settings
 │
+├── assets/                       # Project assets and images
+│   └── benchmark.png             # Locust load testing UI screenshot
+│
 ├── docker-compose.yml            # Docker Compose orchestration
 ├── Dockerfile                    # URL Shortener Dockerfile
-├── requirements.txt              # Python dependencies
+├── pyproject.toml                # Python project configuration (uv/pip)
+├── requirements.txt              # Python dependencies (legacy, use pyproject.toml)
+├── .python-version               # Python version for uv
 ├── pytest.ini                    # Pytest configuration
 ├── alembic.ini                    # Alembic configuration
+├── .flake8                        # flake8 linter configuration
 ├── sample.env                    # Environment variables template
 ├── openapi.yaml                  # OpenAPI/Swagger specification
 ├── README.md                     # This file
@@ -808,9 +912,23 @@ url-shortener/
 
 ### Interactive Documentation
 
-- **Swagger UI**: http://localhost/docs
-- **ReDoc**: http://localhost/redoc
-- **OpenAPI Spec**: http://localhost/openapi.json
+- **Swagger UI**: http://localhost/docs - Interactive API explorer with try-it-out functionality
+- **ReDoc**: http://localhost/redoc - Alternative API documentation interface
+- **OpenAPI Spec**: http://localhost/openapi.json - Machine-readable API specification
+
+### OpenAPI Specification File
+
+The project includes a complete OpenAPI 3.0 specification file (`openapi.yaml`) that defines:
+- All API endpoints with request/response schemas
+- Data models and validation rules
+- Authentication requirements (if applicable)
+- Error response formats
+
+You can use this file with:
+- API documentation generators
+- Client SDK generators (OpenAPI Generator, Swagger Codegen)
+- API testing tools (Postman, Insomnia)
+- API mocking services
 
 ### API Endpoints
 

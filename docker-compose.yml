@@ -212,11 +212,12 @@ services:
       - ./migrations:/app/migrations
       - ./alembic.ini:/app/alembic.ini
       - ./pytest.ini:/app/pytest.ini
+      - ./pyproject.toml:/app/pyproject.toml
     command: >
       sh -c "
-        echo 'Installing test dependencies...' &&
+        echo 'Installing test dependencies with uv...' &&
         pip install uv -q &&
-        uv pip install pytest-asyncio httpx aiosqlite -q &&
+        uv pip install --system -e '.[dev]' -q &&
         echo 'Running tests...' &&
         pytest tests/ -v --tb=short
       "
@@ -240,12 +241,12 @@ services:
       - ./tests:/app/tests
       - ./event-consumer:/app/event-consumer
       - ./analytics-service:/app/analytics-service
-      - ./.flake8:/app/.flake8
+      - ./pyproject.toml:/app/pyproject.toml
     command: >
       sh -c "
-        echo 'Installing flake8...' &&
+        echo 'Installing flake8 with uv...' &&
         pip install uv -q &&
-        uv pip install flake8 -q &&
+        uv pip install --system -e '.[dev]' -q &&
         echo 'Running flake8...' &&
         flake8 app/ tests/ event-consumer/ analytics-service/ --statistics
       "
