@@ -50,4 +50,16 @@ dist/
 .idea/
 *.iml
 
-ai-context/
+__pycache__/
+venv/
+.venv/
+.env
+.env.*
+
+# Pytest
+.cache/
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
