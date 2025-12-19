@@ -2,7 +2,10 @@ fastapi
 pydantic-settings
 sqlmodel
 asyncpg
-redis
+psycopg[binary]
+python-multipart
+redis[hiredis]
+aio-pika
 sqlalchemy
 alembic
 uvicorn
