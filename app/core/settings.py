@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 from enum import Enum
-from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = ["Settings", "settings"]
-
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class EnvSettingsOptions(Enum):

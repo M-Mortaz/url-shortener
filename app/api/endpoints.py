@@ -13,7 +13,7 @@ from app.db.models import ShortURL
 from app.core.id_service import get_id_generator
 from app.core.redis_client import get_redis_client, RedisCache
 from app.core.analytics import get_analytics_publisher
-from app.core.setting import settings
+from app.core.settings import settings
 
 router = APIRouter()
 

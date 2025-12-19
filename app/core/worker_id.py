@@ -8,7 +8,7 @@ from typing import Optional
 
 from redis.asyncio import Redis
 
-from app.core.setting import settings
+from app.core.settings import settings
 
 __all__ = ["WorkerIDManager"]
 

@@ -11,7 +11,7 @@ import aio_pika
 from aio_pika import Connection, Channel, Exchange
 from fastapi import Request
 
-from app.core.setting import settings
+from app.core.settings import settings
 
 __all__ = ["AnalyticsPublisher", "get_analytics_publisher", "analytics_publisher"]
 

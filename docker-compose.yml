@@ -199,6 +199,34 @@ services:
     networks:
       - url-shortener-network
 
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: url-shortener-test
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
+      - ./pytest.ini:/app/pytest.ini
+    command: >
+      sh -c "
+        echo 'Installing test dependencies...' &&
+        pip install pytest-asyncio httpx aiosqlite -q &&
+        echo 'Running tests...' &&
+        pytest tests/ -v --tb=short
+      "
+    depends_on:
+      url-shortener:
+        condition: service_started
+    networks:
+      - url-shortener-network
+    profiles:
+      - test  # Only start with --profile test
+
 volumes:
   postgres_data:
   redis_data:

@@ -7,7 +7,7 @@ from typing import Optional
 
 from redis.asyncio import Redis, from_url
 
-from app.core.setting import settings
+from app.core.settings import settings
 
 __all__ = ["get_redis_client", "redis_client", "RedisCache"]
 

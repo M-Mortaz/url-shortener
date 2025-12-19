@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.setting import settings
+from app.core.settings import settings
 
 # Create async database engine with connection pooling
 # The engine manages a pool of database connections that are reused across requests

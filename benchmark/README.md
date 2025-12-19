@@ -59,34 +59,39 @@ LOCUST_SHORT_CODES="abc123,def456,ghi789" docker compose up -d locust
 
 ## Running with Docker Compose (Recommended)
 
-The Locust master and workers are configured in `docker-compose.yml`.
+Locust is configured in `docker-compose.yml` with multi-process support (4 processes by default).
 
-### Start Locust with 8 Workers
+### Start Locust
 
 ```bash
-# Build and start Locust master + 8 workers
-docker compose up --build --scale locust-worker=8 locust-master locust-worker
+# Start Locust service
+docker compose up -d locust
 
 # Or start all services including Locust
-docker compose up --scale locust-worker=8
+docker compose up -d
 ```
 
 Then open your browser to: **http://localhost:8089**
 
+**Note:** Locust runs in simple mode with `--processes 4` for better performance. The `--class-picker` flag enables user class selection in the UI.
+
 ### Stop Locust
 
 ```bash
-docker compose stop locust-master locust-worker
+docker compose stop locust
 ```
 
 ### View Logs
 
 ```bash
-# Master logs
-docker compose logs -f locust-master
+# Locust logs
+docker compose logs -f locust
+```
 
-# Worker logs
-docker compose logs -f locust-worker
+### Restart Locust (after changing environment variables)
+
+```bash
+docker compose restart locust
 ```
 
 ## Manual Installation (Local Testing)
@@ -116,22 +121,18 @@ locust -f locustfile.py --host=http://localhost
 
 Then open your browser to: `http://localhost:8089`
 
-### Distributed Mode (Master + Workers)
+### Multi-Process Mode (Local)
 
-For higher load, run with multiple workers:
+For higher load, run with multiple processes:
 
-**Terminal 1 - Master (with UI):**
 ```bash
-locust -f locustfile.py --master --host=http://localhost:8000
-```
-
-**Terminal 2-9 - Workers (8 workers):**
-```bash
-# Run this command 8 times in separate terminals
-locust -f locustfile.py --worker --master-host=localhost
+# Run with 4 processes (same as Docker setup)
+locust -f locustfile.py --host=http://localhost:8000 --processes 4 --class-picker
 ```
 
 Then open your browser to: `http://localhost:8089`
+
+**Note:** Multi-process mode enables better CPU utilization while maintaining the class picker UI functionality.
 
 ### Command Line (Headless Mode)
 
@@ -266,9 +267,14 @@ When you open the Locust UI, you should see something like:
 - **Solution:** Look for "User classes" section or user class picker in the main page
 
 **Problem:** Want to test with specific short codes
-- **Solution:** Set `LOCUST_SHORT_CODES` environment variable before starting Locust:
+- **Solution:** Set `LOCUST_SHORT_CODES` environment variable in `docker-compose.yml` or when starting:
   ```bash
-  LOCUST_SHORT_CODES=abc123,def456 docker compose restart locust-master locust-worker
+  # Method 1: Edit docker-compose.yml
+  # Set LOCUST_SHORT_CODES in the locust service environment section
+  docker compose restart locust
+  
+  # Method 2: Set when starting
+  LOCUST_SHORT_CODES=abc123,def456 docker compose up -d locust
   ```
 
 ## Test Endpoints
