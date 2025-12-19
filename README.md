@@ -26,6 +26,39 @@ This project is part of a technical interview process and is designed to showcas
 
 ## 🚀 Getting Started
 
+### Option 1: Docker Compose (Recommended)
+
+The easiest way to run the entire stack:
+
+```bash
+# Clone the repo
+git clone https://github.com/mahdimmr/url-shortener.git
+cd url-shortener
+
+# Copy sample.env to .env (Docker Compose will read from .env)
+cp sample.env .env
+
+# Note: sample.env is pre-configured for Docker. For local development,
+# edit .env and change connection strings to use localhost instead of service names
+
+# Start all services (PostgreSQL, Redis, RabbitMQ, and the app)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f app
+
+# Stop all services
+docker-compose down
+```
+
+The application will be available at:
+- API: [http://localhost:8000/docs](http://localhost:8000/docs)
+- RabbitMQ Management UI: [http://localhost:15672](http://localhost:15672) (guest/guest)
+
+**Note:** Docker Compose automatically reads environment variables from `.env` file and overrides connection strings to use Docker service names (postgres, redis, rabbitmq).
+
+### Option 2: Local Development
+
 ### 1. Clone the repo
 
 ```bash
@@ -47,6 +80,7 @@ pip install -r requirements.txt
 
 ```bash
 cp sample.env .env
+# Edit .env with your database, Redis, and RabbitMQ connection strings
 alembic upgrade head
 ```
 
@@ -94,11 +128,38 @@ app/
 
 ---
 
+## 🐳 Docker Deployment
+
+```bash
+# Copy environment file
+cp sample.env .env
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Services
+
+- **PostgreSQL**: Database on port 5432
+- **Redis**: Cache on port 6379
+- **RabbitMQ**: Message queue on port 5672 (Management UI on 15672)
+- **FastAPI App**: API on port 8000
+
+All services are connected via a Docker network. Environment variables are read from `.env` file, and connection strings are automatically configured to use Docker service names.
+
+---
+
 ## 🧠 Bonus Ideas (if you have time)
 
 - Custom short code support
 - Expiration time for URLs
 - Admin dashboard to view top URLs
-- Dockerfile & deployment configs
+- Dockerfile & deployment configs ✅ (Completed!)
 
 ---
