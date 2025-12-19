@@ -1,0 +1,336 @@
+openapi: 3.0.3
+info:
+  title: URL Shortener Service API
+  description: |
+    A scalable URL shortener service with analytics capabilities.
+    
+    ## Architecture
+    
+    This API consists of three main services:
+    1. **URL Shortener Service** (FastAPI) - Handles URL shortening and redirection
+    2. **Analytics Service** (Litestar) - Provides analytics and statistics from ClickHouse
+    3. **Event Consumer** - Consumes click events from RabbitMQ and stores in ClickHouse
+    
+    ## Request Routing (via Nginx)
+    
+    All requests are routed through Nginx on port 80:
+    - **`/stats/*`** → Routes to Analytics Service (Litestar) on port 8001
+    - **All other routes** → Routes to URL Shortener Service (FastAPI) on port 8000
+    
+    ## Data Flow
+    
+    1. **URL Creation**: POST `/shorten` → Stored in PostgreSQL + Redis cache
+    2. **URL Redirection**: GET `/{short_code}` → Redis lookup → Redirect + Publish event to RabbitMQ
+    3. **Event Processing**: Event Consumer reads from RabbitMQ → Stores in ClickHouse
+    4. **Analytics**: GET `/stats/{short_code}` → Queries ClickHouse for aggregated statistics
+    
+    ## Technologies
+    
+    - **PostgreSQL**: Primary database for URL mappings
+    - **Redis**: In-memory cache for fast lookups
+    - **RabbitMQ**: Message queue for asynchronous event processing
+    - **ClickHouse**: Analytics database for click events
+    - **Snowflake ID**: Distributed unique ID generation
+    - **Base62**: URL-friendly encoding for short codes
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost
+    description: Local development server (via Nginx)
+  - url: http://localhost:8000
+    description: URL Shortener Service (direct access)
+  - url: http://localhost:8001
+    description: Analytics Service (direct access)
+
+tags:
+  - name: URL Shortener
+    description: URL shortening and redirection operations
+  - name: Analytics
+    description: Analytics and statistics operations
+
+paths:
+  /shorten:
+    post:
+      tags:
+        - URL Shortener
+      summary: Create a short URL
+      description: |
+        Creates a shortened URL from a long URL. Returns a short code that can be used for redirection.
+        The short code is generated using Snowflake ID and Base62 encoding.
+        
+        **Storage:**
+        - Stored in PostgreSQL database (persistent storage)
+        - Cached in Redis for fast lookups
+        
+        **Request Format:**
+        - Currently accepts JSON only: `{"original_url": "https://example.com"}`
+        - Form-encoded support can be enabled by installing `python-multipart` package
+      operationId: createShortUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShortenRequest'
+            example:
+              original_url: https://www.example.com/very/long/url/path
+      responses:
+        '200':
+          description: Short URL created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortUrlResponse'
+              example:
+                short_code: jdQUMH5idb
+                short_url: http://localhost:8000/jdQUMH5idb
+                original_url: https://www.example.com/very/long/url/path
+        '400':
+          description: Invalid URL provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /{short_code}:
+    get:
+      tags:
+        - URL Shortener
+      summary: Redirect to original URL
+      description: |
+        Redirects to the original URL associated with the short code.
+        
+        **Performance optimizations:**
+        - Redis cache-first lookup for minimal latency
+        - Falls back to PostgreSQL on cache miss
+        - Automatically backfills Redis cache
+        
+        **Analytics:**
+        - Publishes click event to RabbitMQ asynchronously (non-blocking)
+        - Event includes: short_code, timestamp, user_agent, IP address, referrer
+        - Events are consumed by Event Consumer service and stored in ClickHouse
+        
+        **Note:** This endpoint does NOT match `/stats/*` paths, which are routed to Analytics Service.
+      operationId: redirectToUrl
+      parameters:
+        - name: short_code
+          in: path
+          required: true
+          description: The short code for the URL (must not start with 'stats')
+          schema:
+            type: string
+            pattern: '^(?!stats).*'
+            example: abc123
+      responses:
+        '301':
+          description: Permanent redirect to original URL
+          headers:
+            Location:
+              description: The original URL
+              schema:
+                type: string
+                format: uri
+              example: https://www.example.com/very/long/url/path
+        '404':
+          description: Short code not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Short URL not found"
+
+  /stats/{short_code}:
+    get:
+      tags:
+        - Analytics
+      summary: Get URL statistics (Analytics Service)
+      description: |
+        Returns aggregated statistics for a short URL from ClickHouse analytics database.
+        This endpoint is routed to the Analytics Service (Litestar) via Nginx.
+        
+        Statistics include:
+        - Total clicks
+        - Unique visitors (by IP address)
+        - Last clicked timestamp
+        - Clicks by day (last 30 days)
+        - Top referrers (top 10)
+      operationId: getUrlStats
+      parameters:
+        - name: short_code
+          in: path
+          required: true
+          description: The short code for the URL
+          schema:
+            type: string
+            example: abc123
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrlStats'
+              example:
+                short_code: abc123
+                total_clicks: 1234
+                unique_visitors: 890
+                last_clicked: "2024-01-15T10:30:00Z"
+                clicks_by_day:
+                  - date: "2024-01-15"
+                    clicks: 45
+                  - date: "2024-01-14"
+                    clicks: 32
+                top_referrers:
+                  - referrer: "https://example.com"
+                    clicks: 120
+                  - referrer: "https://google.com"
+                    clicks: 80
+        '404':
+          description: No analytics data found for the short code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "No analytics data found for short_code: abc123"
+
+  /health:
+    get:
+      tags:
+        - Analytics
+      summary: Health check
+      description: Returns the health status of the analytics service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheck'
+
+components:
+  schemas:
+    ShortenRequest:
+      type: object
+      required:
+        - original_url
+      properties:
+        original_url:
+          type: string
+          format: uri
+          description: The original long URL to shorten
+          example: https://www.example.com/very/long/url/path
+    
+    ShortUrlResponse:
+      type: object
+      properties:
+        short_code:
+          type: string
+          description: The generated short code
+          example: abc123
+        short_url:
+          type: string
+          format: uri
+          description: The complete short URL (uses BASE_URL from settings)
+          example: http://localhost:8000/jdQUMH5idb
+        original_url:
+          type: string
+          format: uri
+          description: The original long URL
+          example: https://www.example.com/very/long/url/path
+      required:
+        - short_code
+        - short_url
+        - original_url
+
+    UrlStats:
+      type: object
+      properties:
+        short_code:
+          type: string
+          description: The short code
+          example: abc123
+        total_clicks:
+          type: integer
+          description: Total number of clicks
+          example: 1234
+        unique_visitors:
+          type: integer
+          description: Number of unique visitors (by IP address)
+          example: 890
+        last_clicked:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of the last click
+          example: "2024-01-15T10:30:00Z"
+        clicks_by_day:
+          type: array
+          description: Daily click counts for the last 30 days
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+                example: "2024-01-15"
+              clicks:
+                type: integer
+                example: 45
+        top_referrers:
+          type: array
+          description: Top 10 referrers by click count
+          items:
+            type: object
+            properties:
+              referrer:
+                type: string
+                format: uri
+                description: The referrer URL
+                example: https://example.com
+              clicks:
+                type: integer
+                description: Number of clicks from this referrer
+                example: 120
+      required:
+        - short_code
+        - total_clicks
+        - unique_visitors
+        - last_clicked
+        - clicks_by_day
+        - top_referrers
+
+    HealthCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        service:
+          type: string
+          example: analytics
+      required:
+        - status
+        - service
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message
+          example: Short code not found
+      required:
+        - detail
+
