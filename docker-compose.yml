@@ -215,7 +215,8 @@ services:
     command: >
       sh -c "
         echo 'Installing test dependencies...' &&
-        pip install pytest-asyncio httpx aiosqlite -q &&
+        pip install uv -q &&
+        uv pip install pytest-asyncio httpx aiosqlite -q &&
         echo 'Running tests...' &&
         pytest tests/ -v --tb=short
       "
@@ -226,6 +227,32 @@ services:
       - url-shortener-network
     profiles:
       - test  # Only start with --profile test
+
+  lint:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: url-shortener-lint
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+      - ./event-consumer:/app/event-consumer
+      - ./analytics-service:/app/analytics-service
+      - ./.flake8:/app/.flake8
+    command: >
+      sh -c "
+        echo 'Installing flake8...' &&
+        pip install uv -q &&
+        uv pip install flake8 -q &&
+        echo 'Running flake8...' &&
+        flake8 app/ tests/ event-consumer/ analytics-service/ --statistics
+      "
+    networks:
+      - url-shortener-network
+    profiles:
+      - lint  # Only start with --profile lint
 
 volumes:
   postgres_data:

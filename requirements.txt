@@ -13,3 +13,4 @@ pytest
 pytest-asyncio
 httpx
 aiosqlite
+flake8>=7.0.0
